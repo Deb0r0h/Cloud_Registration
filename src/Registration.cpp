@@ -80,6 +80,7 @@ std::tuple<std::vector<size_t>, std::vector<size_t>, double> Registration::find_
   std::vector<size_t> source_indices;
   Eigen::Vector3d source_point;
   double rmse;
+  std::cout<<"test"<<std::endl;
   return {source_indices, target_indices, rmse};
 }
 
