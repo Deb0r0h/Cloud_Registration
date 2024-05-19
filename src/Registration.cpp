@@ -1,6 +1,6 @@
 #include "Registration.h"
 
-
+//Point 0/4 (not indicated in the pdf files!)
 struct PointDistance
 { 
   ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -13,6 +13,45 @@ struct PointDistance
   // WARNING: When dealing with the AutoDiffCostFunction template parameters,
   // pay attention to the order of the template parameters
   ////////////////////////////////////////////////////////////////////////////////////////////////////
+
+  PointDistance(Eigen::Vector3d source, Eigen::Vector3d target ) : source(source), target(target) {}
+
+  template<typename T>
+
+  bool operator(const T* const transformation, T* residual) const
+  {
+    //Source data
+    Eigen::Matrix<T,3,1> source_point(T(source[0]), T(source[1]), T(source[2]));
+
+    //Traslation data
+    T tx = transformation[3];
+    T ty = transformation[4];
+    T tz = transformation[5];
+
+    //Rotate and traslate
+    Eigen::Matrix<T,3,1> rotated_point;
+    ceres::AngleAxisRotatePoint(transformation, source_point.data(), rotated_point.data());
+    rotated_point[0] += tx;
+    rotated_point[1] += ty;
+    rotated_point[2] += tz;
+
+    //Compute residual (difference between our data and target)
+    residual[0] = rotated_point.x() - target.x();
+    residual[1] = rotated_point.y() - target.y();
+    residual[2] = rotated_point.z() - target.z();
+
+    return true;
+  }
+
+  //TODO provare passando const Eigen::Vector3d source, const Eigen::Vector3d target
+  static ceres::CostFunction* Create(Eigen::Vector3d& source, Eigen::Vector3d& target)
+  {
+    return (new ceres::AutoDiffCostFunction<PointDistance,3,6>(new PointDistance(source, target)));
+  }
+
+  Eigen::Vector3d source;
+  Eigen::Vector3d target;
+
 };
 
 
