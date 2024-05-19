@@ -18,6 +18,16 @@ struct PointDistance
 
   template<typename T>
 
+
+
+  /*
+    REPORT
+    -First we extract the value of the source point and the traslation parameters of the transformation
+    -We apply a rotation to the source point (using an angle-axis representation for the rotation)
+    and we add the traslation to obtain the final point
+    -At the end we calculate the residual as calculated point - target point
+
+  */
   bool operator(const T* const transformation, T* residual) const
   {
     //Source data
@@ -28,7 +38,7 @@ struct PointDistance
     T ty = transformation[4];
     T tz = transformation[5];
 
-    //Rotate and traslate
+    //Rotate and traslate (our final point)
     Eigen::Matrix<T,3,1> rotated_point;
     ceres::AngleAxisRotatePoint(transformation, source_point.data(), rotated_point.data());
     rotated_point[0] += tx;
