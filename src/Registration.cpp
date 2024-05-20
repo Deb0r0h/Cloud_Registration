@@ -1,5 +1,7 @@
 #include "Registration.h"
 
+
+//TEST
 //Point 0/4 (not indicated in the pdf files!)
 struct PointDistance
 { 
