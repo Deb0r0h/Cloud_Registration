@@ -151,7 +151,9 @@ std::tuple<std::vector<size_t>, std::vector<size_t>, double> Registration::find_
       target_indices.push_back(idx[0]);
       rmse = rmse * i/(i+1) + dist2[0]/(i+1);
     }
-  } 
+  }
+
+  rmse = sqrt(rmse); 
 
   std::cout<<"test"<<std::endl;
   return {source_indices, target_indices, rmse};
@@ -194,7 +196,15 @@ Eigen::Matrix4d Registration::get_svd_icp_transformation(std::vector<size_t> sou
   Eigen::Matrix3d R = SVD.matrixU() * SVD.matrixV().transpose();
 
   //Special case: reflection
-  TODO
+  // check the value of det(UV^T) = det(U) * det(V^T) = det(U) * det(V)
+  if(SVD.matrixU().determinant() * SVD.matrixV().determinant() == -1)
+  {
+    Eigen::Vector3d temp;
+    temp << 1,1,-1;
+    Eigen::DiagonalMatrix<double,3> diag = temp.asDiagonal();
+    //R = U * diag(1,1,-1) * V^T
+    R = SVD.matrixU() * diag * SVD.matrixV().transpose();
+  }
 
   //Compute traslation
   Eigen::Vector3d t = target_centroid - (R * source_centroid);
