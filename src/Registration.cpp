@@ -196,7 +196,7 @@ Eigen::Matrix4d Registration::get_svd_icp_transformation(std::vector<size_t> sou
   Eigen::Matrix3d R = SVD.matrixU() * SVD.matrixV().transpose();
 
   //Special case: reflection
-  // check the value of det(UV^T) = det(U) * det(V^T) = det(U) * det(V)
+  //I have to check the value of det(UV^T) = det(U) * det(V^T) = det(U) * det(V)
   if(SVD.matrixU().determinant() * SVD.matrixV().determinant() == -1)
   {
     Eigen::Vector3d temp;
