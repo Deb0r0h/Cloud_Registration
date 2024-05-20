@@ -129,7 +129,7 @@ std::tuple<std::vector<size_t>, std::vector<size_t>, double> Registration::find_
   //Creation of kdTree to speed up the search in 3D space
   open3d::geometry::KDTreeFlann target_kd_tree(target_);
   
-  //Search knn needs: query, knn, indices (1), distance at power 2
+  //Search knn needs: query, knn, indices (1), distance^2
   //Since we are looking for the closest point this two vectors contain only one element (knn = 1)
   std::vector<int> idx(1);
   std::vector<double> dist2(1);
@@ -157,7 +157,7 @@ std::tuple<std::vector<size_t>, std::vector<size_t>, double> Registration::find_
   return {source_indices, target_indices, rmse};
 }
 
-//Point 2/4 ?
+//Point 2/4
 Eigen::Matrix4d Registration::get_svd_icp_transformation(std::vector<size_t> source_indices, std::vector<size_t> target_indices){
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   //Find point clouds centroids and subtract them. 
@@ -166,6 +166,43 @@ Eigen::Matrix4d Registration::get_svd_icp_transformation(std::vector<size_t> sou
   //Remember to manage the special reflection case.
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   Eigen::Matrix4d transformation = Eigen::Matrix4d::Identity(4,4);
+
+  //Clone the source point (for icp)
+  open3d::geometry::PointCloud source_clone = source_for_icp_;
+
+  //Compute centroid:
+  //ComputeMeanAndCovariance returns a tupla with the mean(the centroids) and the covariance matrix
+  //Using get<0> I obtain only the mean value, what i need
+  Eigen::Vector3d source_centroid, target_centroid;
+  source_centroid = std::get<0>(source_clone.ComputeMeanAndCovariance());
+  target_centroid = std::get<0>(target_.ComputeMeanAndCovariance());
+
+  //Subtract the centroid and calculate the W matrix using the theorem showed on lecture 14
+  Eigen::Matrix3d W;
+  for(int i = 0; i<source_indices.size(); ++i)
+  {
+    Eigen::Vector3d d = source_clone.points_[source_indices[i]] - source_centroid;
+    Eigen::Vector3d m = target_.points_[target_indices[i]] - target_centroid;
+    W = W + m * d.transpose();
+  }
+
+  //SVD
+  //Try with ComputeThinXXXX
+  Eigen::JacobiSVD<Eigen::MatrixXd> SVD(W, Eigen::ComputeFullU | Eigen::ComputeFullV);
+
+  //Compute rotation
+  Eigen::Matrix3d R = SVD.matrixU() * SVD.matrixV().transpose();
+
+  //Special case: reflection
+  TODO
+
+  //Compute traslation
+  Eigen::Vector3d t = target_centroid - (R * source_centroid);
+
+  //Assign value R,t to transformation
+  transformation.block<3,3>(0,0) = R;
+  transformation.block<3,1>(0,3) = t;
+
   return transformation;
 }
 
