@@ -17,16 +17,12 @@ struct PointDistance
   PointDistance(Eigen::Vector3d source, Eigen::Vector3d target ) : source(source), target(target) {}
 
   template<typename T>
-
-
-
   /*
     REPORT
     -First we extract the value of the source point and the traslation parameters of the transformation
     -We apply a rotation to the source point (using an angle-axis representation for the rotation)
     and we add the traslation to obtain the final point
     -At the end we calculate the residual as calculated point - target point
-
   */
   bool operator(const T* const transformation, T* residual) const
   {
@@ -129,6 +125,34 @@ std::tuple<std::vector<size_t>, std::vector<size_t>, double> Registration::find_
   std::vector<size_t> source_indices;
   Eigen::Vector3d source_point;
   double rmse;
+
+  //Creation of kdTree to speed up the search in 3D space
+  open3d::geometry::KDTreeFlann target_kd_tree(target_);
+  
+  //Search knn needs: query, knn, indices (1), distance at power 2
+  //Since we are looking for the closest point this two vectors contain only one element (knn = 1)
+  std::vector<int> idx(1);
+  std::vector<double> dist2(1);
+
+  //Clone the source point (for icp)
+  open3d::geometry::PointCloud source_clone = source_for_icp_;
+
+  //Search the closest point and save its informations
+  int points_number = source_clone.points_.size();
+  for(size_t i = 0; i < points_number; ++i)
+  {
+    source_point = source_clone.points_[i];
+    target_kd_tree.SearchKNN(source_point,1,idx,dist2);
+
+    //Check the threshold
+    if(sqrt(dist2[0]) <= threshold)
+    {
+      source_indices.push_back(i);
+      target_indices.push_back(idx[0]);
+      rmse = rmse * i/(i+1) + dist2[0]/(i+1);
+    }
+  } 
+
   std::cout<<"test"<<std::endl;
   return {source_indices, target_indices, rmse};
 }
