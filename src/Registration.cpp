@@ -1,7 +1,6 @@
 #include "Registration.h"
 
 
-//TEST 2
 //Point 0/4 (not indicated in the pdf files!)
 struct PointDistance
 { 
@@ -18,7 +17,6 @@ struct PointDistance
 
   PointDistance(Eigen::Vector3d source, Eigen::Vector3d target ) : source(source), target(target) {}
 
-  template<typename T>
   /*
     REPORT
     -First we extract the value of the source point and the traslation parameters of the transformation
@@ -26,10 +24,12 @@ struct PointDistance
     and we add the traslation to obtain the final point
     -At the end we calculate the residual as calculated point - target point
   */
-  bool operator(const T* const transformation, T* residual) const
+  template<typename T>
+  bool operator()(const T* const transformation, T* residual) const
   {
     //Source data
-    Eigen::Matrix<T,3,1> source_point(T(source[0]), T(source[1]), T(source[2]));
+    Eigen::Matrix<T,3,1> source_point;
+    source_point << T(source[0]), T(source[1]), T(source[2]);
 
     //Traslation data
     T tx = transformation[3];
