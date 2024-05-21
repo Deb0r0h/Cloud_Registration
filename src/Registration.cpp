@@ -234,14 +234,42 @@ Eigen::Matrix4d Registration::get_lm_icp_registration(std::vector<size_t> source
   options.minimizer_progress_to_stdout = false;
   options.num_threads = 4;
   options.max_num_iterations = 100;
-
   std::vector<double> transformation_arr(6, 0.0);
   int num_points = source_indices.size();
+
+  //Clone the source point (for icp)
+  open3d::geometry::PointCloud source_clone = source_for_icp_;
+
+  //I need for ceres (Struct variable)
+  Eigen::Vector3d source;
+  Eigen::Vector3d target;
+
+  //Ceres problem and summary (used in solve())
+  ceres::Problem problem; 
+  ceres::Solver::Summary summary;
+
   // For each point....
   for( int i = 0; i < num_points; i++ )
   {
-    
+    source = source_clone.points_[source_indices[i]];
+    target = target_.points_[target_indices[i]];
+
+    ceres::CostFunction* cost_function = PointDistance::Create(source,target);
+    problem.AddResidualBlock(cost_function,nullptr,transformation_arr.data());
   }
+
+  //Solve the problem
+  Solve(options,&problem,&summary);
+
+  //Obtain the rotation data (euler formulation) and convert to rotation matrix formulation
+  Eigen::Vector3d rotation{transformation_arr[0],transformation_arr[1],transformation_arr[2]};
+
+  //Obtain the traslation vector from tranformation_arr
+  Eigen::Vector3d traslation{transformation_arr[3],transformation_arr[4],transformation_arr[5]};
+
+  //Assign value R,t to transformation
+  transformation.block<3,3>(0,0) = rotation;
+  transformation.block<3,1>(0,3) = traslation;
 
   return transformation;
 }
