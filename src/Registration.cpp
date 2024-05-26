@@ -124,7 +124,6 @@ void Registration::execute_icp_registration(double threshold, int max_iteration,
     double current_rmse = std::get<2>(closest_point);
 
     //Check the convergence criteria and update the rmse
-    //PROVARE CON RETURN AL POSTO DI BREAK
     if(std::abs(current_rmse - rmse) < relative_rmse) {return;}
     rmse = current_rmse;
 
