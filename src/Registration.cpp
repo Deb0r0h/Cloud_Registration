@@ -1,7 +1,7 @@
 #include "Registration.h"
 
 
-//Point 0/4 (not indicated in the pdf files!)
+//Point 0/4
 struct PointDistance
 { 
   ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -31,7 +31,7 @@ struct PointDistance
     Eigen::Matrix<T,3,1> source_point;
     source_point << T(source[0]), T(source[1]), T(source[2]);
 
-    //Traslation data
+    //Translation data
     T tx = transformation[3];
     T ty = transformation[4];
     T tz = transformation[5];
@@ -113,6 +113,52 @@ void Registration::execute_icp_registration(double threshold, int max_iteration,
   //Remember to update transformation_ class variable, you can use source_for_icp_ to store transformed 3d points.
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+  double rmse = 0.0;
+
+  for(int i=0;i<max_iteration;++i)
+  {
+    //Get the value from find_closest_point function
+    std::tuple<std::vector<size_t>, std::vector<size_t>, double> closest_point = find_closest_point(threshold);
+    std::vector<size_t> source_indices = std::get<0>(closest_point);
+    std::vector<size_t> target_indices = std::get<1>(closest_point);
+    double current_rmse = std::get<2>(closest_point);
+
+    //Check the convergence criteria and update the rmse
+    //PROVARE CON RETURN AL POSTO DI BREAK
+    if(std::abs(current_rmse - rmse) < relative_rmse) {return;}
+    rmse = current_rmse;
+
+    //Creation of the transformations used to compute the final one
+    Eigen::Matrix4d previous_transformation, current_transformation, final_transformation;
+    previous_transformation = get_transformation();
+    current_transformation = Eigen::Matrix4d::Identity();
+    final_transformation = Eigen::Matrix4d::Identity();
+
+    //Set the current_transformation according to the chosen mode
+    if(mode == "svd")
+    {
+      current_transformation = get_svd_icp_transformation(source_indices,target_indices);
+    }
+    else if(mode == "lm")
+    {
+      current_transformation = get_lm_icp_registration(source_indices,target_indices);
+    }
+
+    //Assign value to the final_transformation
+    //assegno la parte di rotazione e di traslazione tenendo conto che nella seconda ho ruotato
+    
+    final_transformation.block<3,3>(0,0) = current_transformation.block<3,3>(0,0) * previous_transformation.block<3,3>(0,0);
+    final_transformation.block<3,1>(0,3) = current_transformation.block<3,3>(0,0) * previous_transformation.block<3,1>(0,3) + current_transformation.block<3,1>(0,3);
+
+    //Update transformation_ class variable
+    set_transformation(final_transformation);
+
+    //REPORT: applico solo quella corrente e non quella che tiene conto di prima e dopo
+    //in source_icp è usato per i singoli passaggi icp, quindi ha bisogno solo delle cose correnti
+    source_for_icp_.Transform(current_transformation);
+
+  }
+
   return;
 }
 
@@ -131,7 +177,7 @@ std::tuple<std::vector<size_t>, std::vector<size_t>, double> Registration::find_
   //Creation of kdTree to speed up the search in 3D space
   open3d::geometry::KDTreeFlann target_kd_tree(target_);
   
-  //Search knn needs: query, knn, indices (1), distance^2
+  //SearchKNN needs: query, knn, indices (1), distance^2
   //Since we are looking for the closest point this two vectors contain only one element (knn = 1)
   std::vector<int> idx(1);
   std::vector<double> dist2(1);
@@ -157,7 +203,6 @@ std::tuple<std::vector<size_t>, std::vector<size_t>, double> Registration::find_
 
   rmse = sqrt(rmse); 
 
-  std::cout<<"test"<<std::endl;
   return {source_indices, target_indices, rmse};
 }
 
@@ -183,37 +228,36 @@ Eigen::Matrix4d Registration::get_svd_icp_transformation(std::vector<size_t> sou
 
   //Subtract the centroid and calculate the W matrix using the theorem showed on lecture 14
   Eigen::Matrix3d W;
-  for(int i = 0; i<source_indices.size(); ++i)
+  int source_size = source_indices.size();
+  for(int i = 0; i<source_size; ++i)
   {
     Eigen::Vector3d d = source_clone.points_[source_indices[i]] - source_centroid;
     Eigen::Vector3d m = target_.points_[target_indices[i]] - target_centroid;
     W = W + m * d.transpose();
   }
 
-  //SVD
-  //Try with ComputeThinXXXX
+  //SVD  (test: try with ComputeThinXXX)
   Eigen::JacobiSVD<Eigen::MatrixXd> SVD(W, Eigen::ComputeFullU | Eigen::ComputeFullV);
 
   //Compute rotation
-  Eigen::Matrix3d R = SVD.matrixU() * SVD.matrixV().transpose();
+  Eigen::Matrix3d rotation = SVD.matrixU() * SVD.matrixV().transpose();
 
   //Special case: reflection
   //I have to check the value of det(UV^T) = det(U) * det(V^T) = det(U) * det(V)
   if(SVD.matrixU().determinant() * SVD.matrixV().determinant() == -1)
   {
-    Eigen::Vector3d temp;
-    temp << 1,1,-1;
-    Eigen::DiagonalMatrix<double,3> diag = temp.asDiagonal();
+    Eigen::DiagonalMatrix<double,3> diag;
+    diag.diagonal() << 1.0, 1.0, -1.0;
     //R = U * diag(1,1,-1) * V^T
-    R = SVD.matrixU() * diag * SVD.matrixV().transpose();
+    rotation = SVD.matrixU() * diag * SVD.matrixV().transpose();
   }
 
   //Compute traslation
-  Eigen::Vector3d t = target_centroid - (R * source_centroid);
+  Eigen::Vector3d translation = target_centroid - (rotation * source_centroid);
 
   //Assign value R,t to transformation
-  transformation.block<3,3>(0,0) = R;
-  transformation.block<3,1>(0,3) = t;
+  transformation.block<3,3>(0,0) = rotation;
+  transformation.block<3,1>(0,3) = translation;
 
   return transformation;
 }
@@ -259,15 +303,25 @@ Eigen::Matrix4d Registration::get_lm_icp_registration(std::vector<size_t> source
   }
 
   //Solve the problem
-  Solve(options,&problem,&summary);
+  Solve(options, &problem, &summary);
 
   //Obtain the rotation data (euler formulation) and convert to rotation matrix formulation
-  Eigen::Vector3d rotation{transformation_arr[0],transformation_arr[1],transformation_arr[2]};
+  double roll,pitch,yaw;
+  roll = transformation_arr[0];
+  pitch = transformation_arr[1];
+  yaw = transformation_arr[2];
+
+  Eigen::AngleAxisd roll_angle {roll, Eigen::Vector3d::UnitX()};
+  Eigen::AngleAxisd pitch_angle {pitch, Eigen::Vector3d::UnitY()};
+  Eigen::AngleAxisd yaw_angle {yaw, Eigen::Vector3d::UnitZ()};
+
+  Eigen::Matrix3d rotation = Eigen::Matrix3d::Identity();
+  rotation = yaw_angle * pitch_angle * roll_angle;
 
   //Obtain the traslation vector from tranformation_arr
   Eigen::Vector3d traslation{transformation_arr[3],transformation_arr[4],transformation_arr[5]};
 
-  //Assign value R,t to transformation
+  //Assign value rotation,traslation to transformation
   transformation.block<3,3>(0,0) = rotation;
   transformation.block<3,1>(0,3) = traslation;
 
