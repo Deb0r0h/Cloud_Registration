@@ -51,8 +51,7 @@ struct PointDistance
     return true;
   }
 
-  //TODO provare passando const Eigen::Vector3d source, const Eigen::Vector3d target
-  static ceres::CostFunction* Create(Eigen::Vector3d& source, Eigen::Vector3d& target)
+  static ceres::CostFunction* Create(const Eigen::Vector3d source, const Eigen::Vector3d target)
   {
     return (new ceres::AutoDiffCostFunction<PointDistance,3,6>(new PointDistance(source, target)));
   }
@@ -145,7 +144,6 @@ void Registration::execute_icp_registration(double threshold, int max_iteration,
 
     //Assign value to the final_transformation
     //assegno la parte di rotazione e di traslazione tenendo conto che nella seconda ho ruotato
-    
     final_transformation.block<3,3>(0,0) = current_transformation.block<3,3>(0,0) * previous_transformation.block<3,3>(0,0);
     final_transformation.block<3,1>(0,3) = current_transformation.block<3,3>(0,0) * previous_transformation.block<3,1>(0,3) + current_transformation.block<3,1>(0,3);
 
@@ -235,7 +233,7 @@ Eigen::Matrix4d Registration::get_svd_icp_transformation(std::vector<size_t> sou
     W = W + m * d.transpose();
   }
 
-  //SVD  (test: try with ComputeThinXXX)
+  //SVD
   Eigen::JacobiSVD<Eigen::MatrixXd> SVD(W, Eigen::ComputeFullU | Eigen::ComputeFullV);
 
   //Compute rotation
