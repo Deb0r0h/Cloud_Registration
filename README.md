@@ -10,14 +10,14 @@ make
 NB: mode can be svd or lm
 
 ## Example
-./registration ../data/bunny/source.ply ../data/bunny/target.ply svd
-./registration ../data/bunny/source.ply ../data/bunny/target.ply lm
+- ./registration ../data/bunny/source.ply ../data/bunny/target.ply svd
+- ./registration ../data/bunny/source.ply ../data/bunny/target.ply lm
 
-./registration ../data/dragon/source.ply ../data/dragon/target.ply svd
-./registration ../data/dragon/source.ply ../data/dragon/target.ply lm
+- ./registration ../data/dragon/source.ply ../data/dragon/target.ply svd
+- ./registration ../data/dragon/source.ply ../data/dragon/target.ply lm
 
-./registration ../data/vase/source.ply ../data/vase/target.ply svd
-./registration ../data/vase/source.ply ../data/vase/target.ply lm
+- ./registration ../data/vase/source.ply ../data/vase/target.ply svd
+- ./registration ../data/vase/source.ply ../data/vase/target.ply lm
 
 ## RMSE results:
 - bunny svd = 0.00401621
