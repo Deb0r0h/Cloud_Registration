@@ -19,7 +19,7 @@ NB: mode can be svd or lm
 ./registration ../data/vase/source.ply ../data/vase/target.ply svd
 ./registration ../data/vase/source.ply ../data/vase/target.ply lm
 
-## RMSE data:
+## RMSE results:
 - bunny svd = 0.00401621
 - bunny lm = 0.00341366
 
