@@ -1,7 +1,7 @@
 #include "Registration.h"
 
 
-//Point 0/4
+//Point 1/5
 struct PointDistance
 { 
   ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -95,7 +95,7 @@ void Registration::draw_registration_result()
 }
 
 
-//Point 4/4
+//Point 5/5
 void Registration::execute_icp_registration(double threshold, int max_iteration, double relative_rmse, std::string mode)
 { 
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -150,7 +150,7 @@ void Registration::execute_icp_registration(double threshold, int max_iteration,
   return;
 }
 
-//Point 1/4
+//Point 2/5
 std::tuple<std::vector<size_t>, std::vector<size_t>, double> Registration::find_closest_point(double threshold)
 { ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   //Find source and target indices: for each source point find the closest one in the target and discard if their 
@@ -195,7 +195,7 @@ std::tuple<std::vector<size_t>, std::vector<size_t>, double> Registration::find_
   return {source_indices, target_indices, rmse};
 }
 
-//Point 2/4
+//Point 3/5
 Eigen::Matrix4d Registration::get_svd_icp_transformation(std::vector<size_t> source_indices, std::vector<size_t> target_indices){
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   //Find point clouds centroids and subtract them. 
@@ -251,7 +251,7 @@ Eigen::Matrix4d Registration::get_svd_icp_transformation(std::vector<size_t> sou
   return transformation;
 }
 
-//Point 3/4
+//Point 4/5
 Eigen::Matrix4d Registration::get_lm_icp_registration(std::vector<size_t> source_indices, std::vector<size_t> target_indices)
 {
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
