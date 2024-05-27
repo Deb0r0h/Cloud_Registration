@@ -1,8 +1,8 @@
 
 ## Create a build folder and compile throw cmake
-mkdir build && cd build
-cmake ..
-make
+- mkdir build && cd build
+- cmake ..
+- make
 
 ## Test the application
 ./registration path_to_source path_to_target mode

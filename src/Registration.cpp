@@ -17,13 +17,6 @@ struct PointDistance
 
   PointDistance(Eigen::Vector3d source, Eigen::Vector3d target ) : source(source), target(target) {}
 
-  /*
-    REPORT
-    -First we extract the value of the source point and the traslation parameters of the transformation
-    -We apply a rotation to the source point (using an angle-axis representation for the rotation)
-    and we add the traslation to obtain the final point
-    -At the end we calculate the residual as calculated point - target point
-  */
   template<typename T>
   bool operator()(const T* const transformation, T* residual) const
   {
@@ -143,15 +136,13 @@ void Registration::execute_icp_registration(double threshold, int max_iteration,
     }
 
     //Assign value to the final_transformation
-    //assegno la parte di rotazione e di traslazione tenendo conto che nella seconda ho ruotato
     final_transformation.block<3,3>(0,0) = current_transformation.block<3,3>(0,0) * previous_transformation.block<3,3>(0,0);
     final_transformation.block<3,1>(0,3) = current_transformation.block<3,3>(0,0) * previous_transformation.block<3,1>(0,3) + current_transformation.block<3,1>(0,3);
 
     //Update transformation_ class variable
     set_transformation(final_transformation);
 
-    //REPORT: applico solo quella corrente e non quella che tiene conto di prima e dopo
-    //in source_icp è usato per i singoli passaggi icp, quindi ha bisogno solo delle cose correnti
+    //store transformed 3D points
     source_for_icp_.Transform(current_transformation);
 
   }
@@ -170,6 +161,7 @@ std::tuple<std::vector<size_t>, std::vector<size_t>, double> Registration::find_
   std::vector<size_t> source_indices;
   Eigen::Vector3d source_point;
   double rmse;
+  double mse;
 
   //Creation of kdTree to speed up the search in 3D space
   open3d::geometry::KDTreeFlann target_kd_tree(target_);
@@ -194,11 +186,11 @@ std::tuple<std::vector<size_t>, std::vector<size_t>, double> Registration::find_
     {
       source_indices.push_back(i);
       target_indices.push_back(idx[0]);
-      rmse = rmse * i/(i+1) + dist2[0]/(i+1);
+      mse = mse * i/(i+1) + dist2[0]/(i+1);
     }
   }
 
-  rmse = sqrt(rmse); 
+  rmse = sqrt(mse); 
 
   return {source_indices, target_indices, rmse};
 }
@@ -249,7 +241,7 @@ Eigen::Matrix4d Registration::get_svd_icp_transformation(std::vector<size_t> sou
     rotation = SVD.matrixU() * diag * SVD.matrixV().transpose();
   }
 
-  //Compute traslation
+  //Compute translation
   Eigen::Vector3d translation = target_centroid - (rotation * source_centroid);
 
   //Assign value R,t to transformation
@@ -315,12 +307,12 @@ Eigen::Matrix4d Registration::get_lm_icp_registration(std::vector<size_t> source
   Eigen::Matrix3d rotation = Eigen::Matrix3d::Identity();
   rotation = yaw_angle * pitch_angle * roll_angle;
 
-  //Obtain the traslation vector from tranformation_arr
-  Eigen::Vector3d traslation{transformation_arr[3],transformation_arr[4],transformation_arr[5]};
+  //Obtain the translation vector from tranformation_arr
+  Eigen::Vector3d translation{transformation_arr[3],transformation_arr[4],transformation_arr[5]};
 
-  //Assign value rotation,traslation to transformation
+  //Assign value rotation,translation to transformation
   transformation.block<3,3>(0,0) = rotation;
-  transformation.block<3,1>(0,3) = traslation;
+  transformation.block<3,1>(0,3) = translation;
 
   return transformation;
 }
