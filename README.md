@@ -1,3 +1,7 @@
+# Cloud registration ICP
+
+The project is about iterative closest point cloud registration: given a source and a target point cloud roughly aligned, find the fine alignment transformation of the source to the target cloud.
+
 
 ## Create a build folder and compile throw cmake
 - mkdir build && cd build
