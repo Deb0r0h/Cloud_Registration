@@ -2,6 +2,16 @@
 
 The project is about iterative closest point cloud registration: given a source and a target point cloud roughly aligned, find the fine alignment transformation of the source to the target cloud.
 
+<p align="center">
+  <img src="media_readme/vase.png" width="300" />
+  <img src="media_readme/vase_svd.png" width="300" /> 
+</p>
+
+<p align="center">
+  <img src="media_readme/dragon.png" width="300" />
+  <img src="media_readme/dragon_svd.png" width="300" /> 
+</p>
+
 
 ## Create a build folder and compile throw cmake
 - mkdir build && cd build
